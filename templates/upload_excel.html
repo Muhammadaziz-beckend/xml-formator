@@ -1,0 +1,57 @@
+<!-- templates/upload_excel.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload Excel File</title>
+</head>
+<body>
+    <h2>Upload Excel File</h2>
+
+    <form id="upload-form" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="file" name="file" accept=".xlsx">
+        <button type="submit">Upload</button>
+    </form>
+
+    <div id="response-message">
+        <!-- Сообщения об успешной загрузке или об ошибке будут отображаться здесь -->
+    </div>
+
+    <script>
+        document.getElementById('upload-form').addEventListener('submit', function(event) {
+            event.preventDefault(); // Предотвращаем отправку формы по умолчанию
+
+            let formData = new FormData(this); // Создаем FormData из формы
+            fetch("{% url 'export-excel' %}", { // URL для GET-запроса на сервер
+                method: 'GET',
+                headers: {
+                    'X-CSRFTOKEN': '{{ csrf_token }}' // передаем CSRF токен
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.error || 'Unknown error occurred.');
+                    });
+                }
+                return response.blob(); // Получаем бинарные данные (файл Excel)
+            })
+            .then(blob => {
+                // Создаем ссылку для загрузки файла
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'products.xlsx'; // Имя файла при скачивании
+                document.body.appendChild(a);
+                a.click(); // инициируем скачивание
+                document.body.removeChild(a); // удаляем элемент после использования
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                let messageDiv = document.getElementById('response-message');
+                messageDiv.innerHTML = `<p style="color: red;">${error.message}</p>`;
+            });
+        });
+    </script>
+</body>
+</html>
